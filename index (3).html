@@ -1,0 +1,2229 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaxStay — Taxa de Turismo Automática para Alojamento Local</title>
+<meta name="description" content="Cobre a taxa turística dos seus hóspedes via QR code e pagamento online. Sem estar presente. Declaração automática para a câmara.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F2EDE4;
+    --bg-soft: #F7F3EB;
+    --bg-warm: #EBE3D2;
+    --ink: #161412;
+    --ink-soft: #2A2622;
+    --ink-mid: #4A453E;
+    --ink-muted: #807769;
+    --ink-faint: #B5AC9C;
+    --accent: #DB4B1F;
+    --accent-soft: #E86940;
+    --accent-deep: #B33A12;
+    --azul: #3D5F8A;
+    --line: rgba(22,20,18,0.1);
+    --line-soft: rgba(22,20,18,0.06);
+    --r-md: 16px;
+    --r-lg: 24px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Instrument Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Fraunces', serif;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed;
+    top: 16px; left: 16px; right: 16px;
+    z-index: 100;
+    background: rgba(242,237,228,0.85);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    transition: all 0.3s;
+  }
+
+  nav.scrolled {
+    background: rgba(242,237,228,0.95);
+    box-shadow: 0 8px 32px rgba(22,20,18,0.06);
+  }
+
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px 10px 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .logo {
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ink);
+    text-decoration: none;
+    letter-spacing: -0.04em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .logo-dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-bottom: -4px;
+  }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .lang-toggle {
+    display: flex;
+    background: rgba(22,20,18,0.05);
+    border-radius: 100px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .lang-btn {
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+
+  .lang-btn.active {
+    background: var(--ink);
+    color: var(--bg);
+  }
+
+  .btn-nav {
+    padding: 11px 22px;
+    background: var(--ink);
+    color: var(--bg);
+    border-radius: 100px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-nav:hover { background: var(--accent); }
+  .btn-nav .arrow { transition: transform 0.2s; }
+  .btn-nav:hover .arrow { transform: translate(2px, -2px); }
+
+  /* ─── HERO ─── */
+  .hero {
+    padding: 140px 0 80px;
+    position: relative;
+  }
+
+  .hero-aura {
+    position: absolute;
+    width: 800px; height: 800px;
+    background: radial-gradient(circle, rgba(219,75,31,0.12) 0%, transparent 60%);
+    top: -200px; right: -300px;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(40px);
+  }
+
+  .hero-aura-2 {
+    position: absolute;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(61,95,138,0.08) 0%, transparent 60%);
+    top: 200px; left: -200px;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(40px);
+  }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 60px;
+    align-items: center;
+    position: relative;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    padding: 8px 16px 8px 12px;
+    border-radius: 100px;
+    margin-bottom: 32px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+
+  .hero-eyebrow .live-dot {
+    width: 7px; height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    position: relative;
+  }
+
+  .hero-eyebrow .live-dot::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    background: var(--accent);
+    border-radius: 50%;
+    opacity: 0.4;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.4; }
+    50% { transform: scale(1.6); opacity: 0; }
+  }
+
+  .hero-eyebrow code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .hero h1 {
+    font-size: clamp(56px, 7.5vw, 104px);
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 32px;
+    letter-spacing: -0.04em;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-mid);
+    margin-bottom: 40px;
+    max-width: 480px;
+    font-weight: 400;
+  }
+
+  .hero-ctas {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 48px;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 28px;
+    background: var(--ink);
+    color: var(--bg);
+    border-radius: 100px;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.25s;
+    border: 1px solid var(--ink);
+  }
+
+  .btn-primary:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary .arrow { transition: transform 0.25s; }
+  .btn-primary:hover .arrow { transform: translate(3px, -3px); }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 26px;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-radius: 100px;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+    background: transparent;
+    transition: all 0.25s;
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-soft);
+    border-color: var(--ink);
+  }
+
+  .hero-trust {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--ink-muted);
+    flex-wrap: wrap;
+  }
+
+  .hero-trust strong {
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+
+  .trust-divider {
+    width: 1px; height: 14px;
+    background: var(--line);
+  }
+
+  /* ─── HERO VISUAL ─── */
+  .hero-visual {
+    position: relative;
+    height: 540px;
+  }
+
+  .phone-mockup {
+    position: absolute;
+    width: 280px;
+    background: var(--ink);
+    border-radius: 44px;
+    padding: 12px;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) rotate(-4deg);
+    box-shadow:
+      0 40px 80px -20px rgba(22,20,18,0.4),
+      0 0 0 1px rgba(255,255,255,0.04) inset;
+    z-index: 2;
+  }
+
+  .phone-screen {
+    background: var(--bg-soft);
+    border-radius: 32px;
+    padding: 28px 22px 22px;
+    text-align: center;
+  }
+
+  .phone-notch {
+    width: 80px; height: 22px;
+    background: var(--ink);
+    border-radius: 100px;
+    margin: -8px auto 18px;
+  }
+
+  .phone-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 4px;
+    letter-spacing: -0.04em;
+  }
+
+  .phone-tagline {
+    font-size: 11px;
+    color: var(--ink-muted);
+    margin-bottom: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .qr-box {
+    background: var(--bg);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 16px;
+    border: 1px solid var(--line-soft);
+  }
+
+  .qr-svg { width: 100%; height: auto; }
+
+  .phone-amount {
+    font-size: 38px;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+    font-style: italic;
+  }
+
+  .phone-desc {
+    font-size: 11px;
+    color: var(--ink-muted);
+    margin-bottom: 14px;
+  }
+
+  .phone-pay-btn {
+    background: var(--ink);
+    color: var(--bg);
+    border-radius: 100px;
+    padding: 12px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .floating-card {
+    position: absolute;
+    background: var(--bg-soft);
+    border-radius: var(--r-md);
+    padding: 14px 18px;
+    border: 1px solid var(--line);
+    font-size: 13px;
+    box-shadow: 0 12px 32px rgba(22,20,18,0.08);
+    z-index: 3;
+  }
+
+  .floating-card.fc-1 {
+    top: 8%; left: -8%;
+    transform: rotate(-3deg);
+    animation: float-1 6s ease-in-out infinite;
+  }
+
+  .floating-card.fc-2 {
+    bottom: 12%; right: -5%;
+    transform: rotate(3deg);
+    animation: float-2 7s ease-in-out infinite;
+  }
+
+  @keyframes float-1 {
+    0%, 100% { transform: rotate(-3deg) translateY(0); }
+    50% { transform: rotate(-3deg) translateY(-8px); }
+  }
+
+  @keyframes float-2 {
+    0%, 100% { transform: rotate(3deg) translateY(0); }
+    50% { transform: rotate(3deg) translateY(-10px); }
+  }
+
+  .fc-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+
+  .fc-value {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .fc-value.green { color: #1A7A4A; }
+  .fc-value .arrow-up { color: #1A7A4A; font-size: 14px; }
+
+  /* ─── COVERAGE ─── */
+  .coverage {
+    padding: 80px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-soft);
+  }
+
+  .coverage-inner {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .coverage-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .coverage-label::before {
+    content: '';
+    width: 24px; height: 1px;
+    background: var(--accent);
+  }
+
+  .coverage-headline {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--ink);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  .coverage-headline em {
+    font-style: italic;
+    color: var(--accent);
+    font-weight: 400;
+  }
+
+  .coverage-cities {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+
+  .coverage-city {
+    background: var(--bg-soft);
+    padding: 18px 20px;
+    transition: background 0.2s;
+  }
+
+  .coverage-city:hover { background: var(--bg); }
+
+  .coverage-city-name {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 2px;
+    letter-spacing: -0.01em;
+  }
+
+  .coverage-city-region {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .coverage-more {
+    grid-column: span 5;
+    background: var(--bg-warm);
+    padding: 20px;
+    text-align: center;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink-mid);
+  }
+
+  .coverage-more strong {
+    color: var(--accent);
+    font-weight: 600;
+    font-style: normal;
+  }
+
+  /* ─── SECTION ─── */
+  .section {
+    padding: 120px 0;
+    position: relative;
+  }
+
+  .section-header {
+    margin-bottom: 80px;
+    max-width: 700px;
+  }
+
+  .section-header.center {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+  }
+
+  .section-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 24px;
+  }
+
+  .section-tag::before {
+    content: '';
+    width: 24px; height: 1px;
+    background: var(--accent);
+  }
+
+  .section-title {
+    font-size: clamp(40px, 5.5vw, 76px);
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 24px;
+    letter-spacing: -0.03em;
+  }
+
+  .section-title em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+
+  .section-sub {
+    font-size: 19px;
+    color: var(--ink-mid);
+    line-height: 1.55;
+    max-width: 540px;
+  }
+
+  .section-header.center .section-sub {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ─── BENTO ─── */
+  .bento-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .bento-card {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 36px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bento-card:hover {
+    border-color: var(--ink);
+    transform: translateY(-3px);
+  }
+
+  .bento-card.large {
+    grid-column: span 2;
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+
+  .bento-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin-bottom: 16px;
+    letter-spacing: 0.1em;
+  }
+
+  .bento-card.large .bento-num { color: rgba(255,255,255,0.4); }
+
+  .bento-title {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  .bento-card.large .bento-title { font-size: 40px; }
+  .bento-card.large .bento-title em { font-style: italic; color: var(--accent-soft); font-weight: 400; }
+
+  .bento-text {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink-mid);
+  }
+
+  .bento-card.large .bento-text { color: rgba(255,255,255,0.6); font-size: 17px; max-width: 480px; }
+
+  /* ─── HOW ─── */
+  .how-section { background: var(--bg-warm); }
+
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+
+  .step-card {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 32px 28px;
+    transition: all 0.3s;
+  }
+
+  .step-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+  }
+
+  .step-num {
+    font-family: 'Fraunces', serif;
+    font-size: 64px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 24px;
+    display: block;
+  }
+
+  .step-title {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 12px;
+    letter-spacing: -0.01em;
+  }
+
+  .step-text {
+    font-size: 14px;
+    color: var(--ink-mid);
+    line-height: 1.6;
+  }
+
+  /* ─── PRICING ─── */
+  .billing-toggle {
+    display: inline-flex;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    padding: 4px;
+    margin: 0 auto 56px;
+    gap: 2px;
+    position: relative;
+  }
+
+  .billing-btn {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 100px;
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition: all 0.25s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .billing-btn.active {
+    background: var(--ink);
+    color: var(--bg);
+  }
+
+  .billing-save {
+    background: var(--accent);
+    color: var(--bg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    padding: 3px 7px;
+    border-radius: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .billing-toggle-wrapper {
+    text-align: center;
+  }
+
+  .plans-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .plan-card {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 36px 32px;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .plan-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--ink);
+  }
+
+  .plan-card.featured {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+
+  .plan-card.featured:hover {
+    border-color: var(--accent);
+  }
+
+  .plan-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+
+  .plan-name {
+    font-family: 'Fraunces', serif;
+    font-size: 30px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+
+  .plan-card.featured .plan-name { color: var(--bg); }
+
+  .plan-badge {
+    background: var(--accent);
+    color: var(--bg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .plan-for {
+    font-size: 14px;
+    color: var(--ink-muted);
+    margin-bottom: 32px;
+  }
+
+  .plan-card.featured .plan-for { color: rgba(255,255,255,0.5); }
+
+  .plan-price {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .plan-price .currency {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--ink-mid);
+    margin-top: 14px;
+  }
+
+  .plan-card.featured .plan-price .currency { color: rgba(255,255,255,0.6); }
+
+  .plan-price .amount {
+    font-family: 'Fraunces', serif;
+    font-size: 56px;
+    font-weight: 500;
+    color: var(--ink);
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+
+  .plan-card.featured .plan-price .amount { color: var(--bg); }
+
+  .plan-price .period {
+    font-size: 14px;
+    color: var(--ink-muted);
+    margin-left: 4px;
+  }
+
+  .plan-card.featured .plan-price .period { color: rgba(255,255,255,0.5); }
+
+  .plan-billing-note {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-bottom: 28px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--line);
+    min-height: 40px;
+  }
+
+  .plan-card.featured .plan-billing-note {
+    color: rgba(255,255,255,0.5);
+    border-bottom-color: rgba(255,255,255,0.1);
+  }
+
+  .plan-features {
+    list-style: none;
+    margin-bottom: 32px;
+    flex-grow: 1;
+  }
+
+  .plan-features li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--ink-mid);
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  .plan-card.featured .plan-features li { color: rgba(255,255,255,0.75); }
+
+  .plan-features li svg { flex-shrink: 0; margin-top: 3px; }
+
+  .plan-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px;
+    border-radius: 100px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 15px;
+    transition: all 0.25s;
+    border: 1px solid;
+  }
+
+  .plan-cta.dark {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+  .plan-cta.dark:hover { background: var(--accent); border-color: var(--accent); }
+
+  .plan-cta.light {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--line);
+  }
+  .plan-cta.light:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  .plan-cta.accent {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+  .plan-cta.accent:hover { background: var(--accent-soft); border-color: var(--accent-soft); }
+
+  /* CONCIERGERIE+ — full-width custom card */
+  .plan-enterprise {
+    margin-top: 16px;
+    background: linear-gradient(135deg, var(--ink) 0%, #2A2622 100%);
+    border: 1px solid var(--ink);
+    border-radius: var(--r-lg);
+    padding: 40px 48px;
+    color: var(--bg);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 48px;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .plan-enterprise::before {
+    content: '';
+    position: absolute;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(219,75,31,0.15) 0%, transparent 60%);
+    top: -100px; right: -100px;
+    border-radius: 50%;
+    filter: blur(40px);
+    pointer-events: none;
+  }
+
+  .enterprise-content { position: relative; z-index: 1; }
+
+  .enterprise-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent-soft);
+    margin-bottom: 16px;
+  }
+
+  .enterprise-tag::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+
+  .enterprise-title {
+    font-family: 'Fraunces', serif;
+    font-size: 36px;
+    font-weight: 500;
+    color: var(--bg);
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
+
+  .enterprise-title em {
+    font-style: italic;
+    color: var(--accent-soft);
+    font-weight: 400;
+  }
+
+  .enterprise-desc {
+    font-size: 15px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.6;
+    max-width: 540px;
+    margin-bottom: 16px;
+  }
+
+  .enterprise-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .enterprise-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255,255,255,0.6);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 5px 10px;
+    border-radius: 100px;
+  }
+
+  .enterprise-cta {
+    position: relative;
+    z-index: 1;
+    text-align: right;
+  }
+
+  .enterprise-price {
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    font-style: italic;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 4px;
+  }
+
+  .enterprise-price strong {
+    font-style: normal;
+    font-weight: 600;
+    color: var(--accent-soft);
+  }
+
+  .enterprise-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 28px;
+    background: var(--bg);
+    color: var(--ink);
+    border-radius: 100px;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.25s;
+    margin-top: 12px;
+  }
+
+  .enterprise-btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+    transform: translateY(-1px);
+  }
+
+  .enterprise-btn .arrow { transition: transform 0.25s; }
+  .enterprise-btn:hover .arrow { transform: translate(3px, -3px); }
+
+  .plan-note {
+    text-align: center;
+    margin-top: 56px;
+    font-size: 14px;
+    color: var(--ink-muted);
+  }
+
+  .plan-note strong {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* ─── PROFILES ─── */
+  .profiles-section { background: var(--bg-warm); }
+
+  .profiles-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .profile-card {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 36px 32px;
+    transition: all 0.3s;
+  }
+
+  .profile-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--ink);
+  }
+
+  .profile-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .profile-avatar {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .profile-avatar.a1 { background: var(--ink); color: var(--bg); }
+  .profile-avatar.a2 { background: var(--accent); color: var(--bg); }
+  .profile-avatar.a3 { background: var(--azul); color: var(--bg); }
+
+  .profile-meta { flex-grow: 1; }
+
+  .profile-name {
+    font-family: 'Fraunces', serif;
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+
+  .profile-role {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+
+  .profile-quote {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-style: italic;
+    color: var(--ink-soft);
+    line-height: 1.45;
+    margin-bottom: 24px;
+    font-weight: 400;
+  }
+
+  .profile-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-muted);
+    padding: 5px 10px;
+    background: var(--bg-warm);
+    border-radius: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .profile-tag strong { color: var(--accent); font-weight: 500; }
+
+  /* ─── CTA ─── */
+  .cta-section {
+    padding: 140px 0;
+    background: var(--ink);
+    color: var(--bg);
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+  }
+
+  .cta-aura {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(80px);
+  }
+
+  .cta-aura.a1 {
+    width: 600px; height: 600px;
+    background: rgba(219,75,31,0.25);
+    top: -200px; left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .cta-aura.a2 {
+    width: 400px; height: 400px;
+    background: rgba(61,95,138,0.2);
+    bottom: -150px; right: 10%;
+  }
+
+  .cta-content { position: relative; z-index: 1; }
+
+  .cta-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent-soft);
+    margin-bottom: 28px;
+  }
+
+  .cta-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(48px, 6.5vw, 96px);
+    font-weight: 500;
+    color: var(--bg);
+    margin-bottom: 32px;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+  }
+
+  .cta-title em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+
+  .cta-sub {
+    font-size: 19px;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 48px;
+    line-height: 1.55;
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .cta-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+  }
+
+  .btn-cta-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 32px;
+    background: var(--accent);
+    color: var(--bg);
+    border-radius: 100px;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.25s;
+    border: 1px solid var(--accent);
+  }
+
+  .btn-cta-primary:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent-soft);
+    transform: translateY(-2px);
+  }
+
+  .btn-cta-primary .arrow { transition: transform 0.25s; }
+  .btn-cta-primary:hover .arrow { transform: translate(3px, -3px); }
+
+  .btn-cta-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 30px;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: var(--bg);
+    border-radius: 100px;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.25s;
+  }
+
+  .btn-cta-secondary:hover {
+    border-color: rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.06);
+  }
+
+  .cta-trust {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .cta-trust .dot {
+    width: 3px; height: 3px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 50%;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    background: var(--ink);
+    color: rgba(255,255,255,0.4);
+    padding: 64px 0 32px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 56px;
+    padding-bottom: 48px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 32px;
+  }
+
+  .footer-brand .logo {
+    color: var(--bg);
+    font-size: 28px;
+    margin-bottom: 16px;
+    display: inline-flex;
+  }
+
+  .footer-desc {
+    font-size: 14px;
+    line-height: 1.65;
+    color: rgba(255,255,255,0.5);
+    max-width: 320px;
+    margin-bottom: 20px;
+  }
+
+  .footer-domains {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 0.05em;
+  }
+
+  .footer-domains span { color: var(--accent-soft); }
+
+  .footer-col h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 20px;
+  }
+
+  .footer-col a {
+    display: block;
+    font-size: 14px;
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    margin-bottom: 12px;
+    transition: color 0.2s;
+  }
+
+  .footer-col a:hover { color: var(--accent-soft); }
+
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+  }
+
+  .stripe-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ─── ANIMATIONS ─── */
+  .fade-up {
+    opacity: 0;
+    transform: translateY(32px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+
+  .fade-up.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 960px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 60px; }
+    .hero-visual { height: 480px; }
+    .bento-grid, .steps-grid, .plans-grid, .profiles-grid {
+      grid-template-columns: 1fr;
+    }
+    .bento-card.large { grid-column: span 1; }
+    .footer-grid { grid-template-columns: 1fr; gap: 40px; }
+    .footer-bottom { flex-direction: column; gap: 16px; }
+    .section { padding: 80px 0; }
+    .coverage-inner { grid-template-columns: 1fr; gap: 40px; }
+    .coverage-cities { grid-template-columns: repeat(3, 1fr); }
+    .coverage-more { grid-column: span 3; }
+    .plan-enterprise {
+      grid-template-columns: 1fr;
+      gap: 24px;
+      padding: 32px;
+    }
+    .enterprise-cta { text-align: left; }
+  }
+
+  @media (max-width: 600px) {
+    nav { top: 12px; left: 12px; right: 12px; }
+    .nav-inner { padding: 8px 8px 8px 20px; }
+    .btn-nav { padding: 10px 16px; font-size: 13px; }
+    .btn-nav .arrow { display: none; }
+    .hero { padding: 110px 0 60px; }
+    .hero-ctas { flex-direction: column; }
+    .btn-primary, .btn-secondary { justify-content: center; }
+    .floating-card { display: none; }
+    .phone-mockup { transform: translate(-50%, -50%) rotate(-2deg); }
+    .cta-buttons { flex-direction: column; align-items: stretch; }
+    .container { padding: 0 20px; }
+    .coverage-cities { grid-template-columns: repeat(2, 1fr); }
+    .coverage-more { grid-column: span 2; }
+  }
+
+  /* ─── LANG ─── */
+  [data-lang="en"] { display: none; }
+  body.en [data-lang="pt"] { display: none; }
+  body.en [data-lang="en"] { display: unset; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="navbar">
+  <div class="nav-inner">
+    <a href="#" class="logo">
+      TaxStay<span class="logo-dot"></span>
+    </a>
+    <div class="nav-right">
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="btn-pt" onclick="setLang('pt')">PT</button>
+        <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+      </div>
+      <a href="#pricing" class="btn-nav">
+        <span data-lang="pt">Começar</span>
+        <span data-lang="en">Get started</span>
+        <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 10L10 2M10 2H4M10 2V8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-aura"></div>
+  <div class="hero-aura-2"></div>
+  <div class="container">
+    <div class="hero-grid">
+      <div>
+        <div class="hero-eyebrow">
+          <span class="live-dot"></span>
+          <code>BETA · PORTUGAL 2026</code>
+        </div>
+        <h1>
+          <span data-lang="pt">A taxa<br>turística, <em>sem</em><br>complicações.</span>
+          <span data-lang="en">Tourist tax,<br><em>without</em> the<br>hassle.</span>
+        </h1>
+        <p class="hero-sub">
+          <span data-lang="pt">Os seus hóspedes pagam via QR code e cartão bancário. Você recebe os fundos e a declaração para a câmara — tudo automático.</span>
+          <span data-lang="en">Your guests pay via QR code and card. You receive the funds and the declaration for the municipality — all automatic.</span>
+        </p>
+        <div class="hero-ctas">
+          <a href="#pricing" class="btn-primary">
+            <span data-lang="pt">Criar conta gratuita</span>
+            <span data-lang="en">Create free account</span>
+            <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 12L12 2M12 2H5M12 2V9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#how" class="btn-secondary">
+            <span data-lang="pt">Como funciona</span>
+            <span data-lang="en">How it works</span>
+          </a>
+        </div>
+        <div class="hero-trust">
+          <span><strong>14 dias</strong> <span data-lang="pt">grátis</span><span data-lang="en">free</span></span>
+          <span class="trust-divider"></span>
+          <span><span data-lang="pt">Sem cartão de crédito</span><span data-lang="en">No credit card</span></span>
+          <span class="trust-divider"></span>
+          <span><strong>Stripe</strong> · RGPD</span>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="floating-card fc-1">
+          <div class="fc-label">
+            <span data-lang="pt">Hoje recebido</span>
+            <span data-lang="en">Today received</span>
+          </div>
+          <div class="fc-value green">+47,00 € <span class="arrow-up">↗</span></div>
+        </div>
+
+        <div class="phone-mockup">
+          <div class="phone-screen">
+            <div class="phone-notch"></div>
+            <div class="phone-logo">TaxStay</div>
+            <div class="phone-tagline">Taxa Municipal</div>
+            <div class="qr-box">
+              <svg class="qr-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8" y="8" width="40" height="40" rx="4" fill="#161412"/>
+                <rect x="14" y="14" width="28" height="28" rx="2" fill="#F7F3EB"/>
+                <rect x="20" y="20" width="16" height="16" rx="1" fill="#161412"/>
+                <rect x="72" y="8" width="40" height="40" rx="4" fill="#161412"/>
+                <rect x="78" y="14" width="28" height="28" rx="2" fill="#F7F3EB"/>
+                <rect x="84" y="20" width="16" height="16" rx="1" fill="#161412"/>
+                <rect x="8" y="72" width="40" height="40" rx="4" fill="#161412"/>
+                <rect x="14" y="78" width="28" height="28" rx="2" fill="#F7F3EB"/>
+                <rect x="20" y="84" width="16" height="16" rx="1" fill="#161412"/>
+                <rect x="56" y="8" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="56" y="20" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="8" y="56" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="20" y="56" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="32" y="56" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="56" y="56" width="8" height="8" rx="1" fill="#DB4B1F"/>
+                <rect x="68" y="56" width="8" height="8" rx="1" fill="#DB4B1F"/>
+                <rect x="80" y="56" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="92" y="56" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="104" y="56" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="56" y="68" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="68" y="68" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="80" y="68" width="8" height="8" rx="1" fill="#DB4B1F"/>
+                <rect x="56" y="80" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="68" y="80" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="80" y="80" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="92" y="80" width="8" height="8" rx="1" fill="#DB4B1F"/>
+                <rect x="56" y="92" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="80" y="92" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="92" y="92" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="104" y="92" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="68" y="104" width="8" height="8" rx="1" fill="#161412"/>
+                <rect x="80" y="104" width="8" height="8" rx="1" fill="#DB4B1F"/>
+                <rect x="104" y="104" width="8" height="8" rx="1" fill="#161412"/>
+              </svg>
+            </div>
+            <div class="phone-amount">2,00 €</div>
+            <div class="phone-desc">2 noites · Lisboa</div>
+            <div class="phone-pay-btn">Pagar com cartão</div>
+          </div>
+        </div>
+
+        <div class="floating-card fc-2">
+          <div class="fc-label">
+            <span data-lang="pt">Declaração</span>
+            <span data-lang="en">Declaration</span>
+          </div>
+          <div class="fc-value">PDF ✓</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COVERAGE -->
+<section class="coverage">
+  <div class="container">
+    <div class="coverage-inner">
+      <div>
+        <div class="coverage-label">
+          <span data-lang="pt">Cobertura nacional</span>
+          <span data-lang="en">National coverage</span>
+        </div>
+        <h2 class="coverage-headline">
+          <span data-lang="pt">Disponível em <em>todas as câmaras</em> que cobram taxa turística.</span>
+          <span data-lang="en">Available in <em>every municipality</em> that charges tourist tax.</span>
+        </h2>
+      </div>
+      <div class="coverage-cities">
+        <div class="coverage-city">
+          <div class="coverage-city-name">Lisboa</div>
+          <div class="coverage-city-region">Grande Lisboa</div>
+        </div>
+        <div class="coverage-city">
+          <div class="coverage-city-name">Porto</div>
+          <div class="coverage-city-region">Norte</div>
+        </div>
+        <div class="coverage-city">
+          <div class="coverage-city-name">Cascais</div>
+          <div class="coverage-city-region">Grande Lisboa</div>
+        </div>
+        <div class="coverage-city">
+          <div class="coverage-city-name">Sintra</div>
+          <div class="coverage-city-region">Grande Lisboa</div>
+        </div>
+        <div class="coverage-city">
+          <div class="coverage-city-name">Albufeira</div>
+          <div class="coverage-city-region">Algarve</div>
+        </div>
+        <div class="coverage-city">
+          <div class="coverage-city-name">Lagos</div>
+          <div class="coverage-city-region">Algarve</div>
+        </div>
+        <div class="coverage-city">
+          <div class="coverage-city-name">Faro</div>
+          <div class="coverage-city-region">Algarve</div>
+        </div>
+        <div class="coverage-city">
+          <div class="coverage-city-name">Funchal</div>
+          <div class="coverage-city-region">Madeira</div>
+        </div>
+        <div class="coverage-city">
+          <div class="coverage-city-name">Évora</div>
+          <div class="coverage-city-region">Alentejo</div>
+        </div>
+        <div class="coverage-city">
+          <div class="coverage-city-name">Coimbra</div>
+          <div class="coverage-city-region">Centro</div>
+        </div>
+        <div class="coverage-more">
+          <span data-lang="pt">e <strong>+ 50 outras câmaras municipais</strong> em Portugal</span>
+          <span data-lang="en">and <strong>50+ other municipalities</strong> across Portugal</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM (BENTO) -->
+<section class="section">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-tag">
+        <span data-lang="pt">O problema</span>
+        <span data-lang="en">The problem</span>
+      </div>
+      <h2 class="section-title">
+        <span data-lang="pt">Cobrar a taxa<br>manualmente <em>é caos</em>.</span>
+        <span data-lang="en">Collecting tax by hand<br><em>is chaos</em>.</span>
+      </h2>
+      <p class="section-sub">
+        <span data-lang="pt">Os proprietários de alojamento local em Portugal enfrentam os mesmos problemas todos os dias.</span>
+        <span data-lang="en">Short-term rental owners in Portugal face the same problems every single day.</span>
+      </p>
+    </div>
+
+    <div class="bento-grid">
+      <div class="bento-card large fade-up">
+        <div class="bento-num">01 — <span data-lang="pt">A AUSÊNCIA</span><span data-lang="en">ABSENCE</span></div>
+        <h3 class="bento-title">
+          <span data-lang="pt">Não está lá quando o<br>hóspede <em>faz check-in</em>.</span>
+          <span data-lang="en">You're not there when the<br>guest <em>checks in</em>.</span>
+        </h3>
+        <p class="bento-text">
+          <span data-lang="pt">Pedir em dinheiro ou por transferência é desconfortável. Metade dos hóspedes esquece. A outra metade promete e nunca paga.</span>
+          <span data-lang="en">Asking for cash or bank transfer is awkward. Half of guests forget. The other half promise and never pay.</span>
+        </p>
+      </div>
+
+      <div class="bento-card fade-up">
+        <div class="bento-num">02 — <span data-lang="pt">A BUROCRACIA</span><span data-lang="en">RED TAPE</span></div>
+        <h3 class="bento-title">
+          <span data-lang="pt">Cada câmara,<br>o seu portal.</span>
+          <span data-lang="en">Each city,<br>its own portal.</span>
+        </h3>
+        <p class="bento-text">
+          <span data-lang="pt">Formulários, prazos, valores diferentes em cada município. Um pesadelo administrativo.</span>
+          <span data-lang="en">Different forms, deadlines, and amounts per municipality. An administrative nightmare.</span>
+        </p>
+      </div>
+
+      <div class="bento-card fade-up" style="grid-column: span 2;">
+        <div class="bento-num">03 — <span data-lang="pt">O RISCO</span><span data-lang="en">THE RISK</span></div>
+        <h3 class="bento-title">
+          <span data-lang="pt">Não declarar = coima.<br>A responsabilidade é sua.</span>
+          <span data-lang="en">No declaration = fine.<br>You're responsible.</span>
+        </h3>
+        <p class="bento-text">
+          <span data-lang="pt">Não recolher ou não declarar a taxa turística é uma infração. As coimas podem ser pesadas — e a fiscalização aumenta todos os anos.</span>
+          <span data-lang="en">Failing to collect or declare tourist tax is an offence. Fines can be heavy — and inspections increase every year.</span>
+        </p>
+      </div>
+
+      <div class="bento-card fade-up">
+        <div class="bento-num">04 — <span data-lang="pt">O TEMPO</span><span data-lang="en">TIME</span></div>
+        <h3 class="bento-title">
+          <span data-lang="pt">Horas perdidas<br>todos os meses.</span>
+          <span data-lang="en">Hours wasted<br>every month.</span>
+        </h3>
+        <p class="bento-text">
+          <span data-lang="pt">Calcular, declarar, transferir, arquivar. Tempo que poderia investir em receber mais hóspedes.</span>
+          <span data-lang="en">Calculate, declare, transfer, file. Time you could spend hosting more guests.</span>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW -->
+<section class="section how-section" id="how">
+  <div class="container">
+    <div class="section-header center fade-up">
+      <div class="section-tag">
+        <span data-lang="pt">Como funciona</span>
+        <span data-lang="en">How it works</span>
+      </div>
+      <h2 class="section-title">
+        <span data-lang="pt">Quatro passos.<br><em>Zero esforço.</em></span>
+        <span data-lang="en">Four steps.<br><em>Zero effort.</em></span>
+      </h2>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card fade-up">
+        <span class="step-num">01</span>
+        <h3 class="step-title">
+          <span data-lang="pt">Cria o seu alojamento</span>
+          <span data-lang="en">Create your property</span>
+        </h3>
+        <p class="step-text">
+          <span data-lang="pt">Adicione o endereço, o município e o valor da taxa local. Levará menos de 2 minutos.</span>
+          <span data-lang="en">Add the address, municipality, and local tax amount. Less than 2 minutes.</span>
+        </p>
+      </div>
+      <div class="step-card fade-up">
+        <span class="step-num">02</span>
+        <h3 class="step-title">
+          <span data-lang="pt">Gera o QR code</span>
+          <span data-lang="en">Generate the QR code</span>
+        </h3>
+        <p class="step-text">
+          <span data-lang="pt">TaxStay gera um QR code único por alojamento. Imprima-o e coloque-o na entrada.</span>
+          <span data-lang="en">TaxStay generates a unique QR per property. Print it and place it at the entrance.</span>
+        </p>
+      </div>
+      <div class="step-card fade-up">
+        <span class="step-num">03</span>
+        <h3 class="step-title">
+          <span data-lang="pt">O hóspede paga</span>
+          <span data-lang="en">Guest pays</span>
+        </h3>
+        <p class="step-text">
+          <span data-lang="pt">Lê o QR, preenche o formulário, paga com cartão. Recibo automático por email.</span>
+          <span data-lang="en">They scan, fill the form, pay by card. Automatic email receipt.</span>
+        </p>
+      </div>
+      <div class="step-card fade-up">
+        <span class="step-num">04</span>
+        <h3 class="step-title">
+          <span data-lang="pt">Declara à câmara</span>
+          <span data-lang="en">Declare to the municipality</span>
+        </h3>
+        <p class="step-text">
+          <span data-lang="pt">Descarregue o PDF de declaração já preenchido. Transfira diretamente para a câmara.</span>
+          <span data-lang="en">Download the pre-filled declaration PDF. Transfer it directly to the municipality.</span>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="section" id="pricing">
+  <div class="container">
+    <div class="section-header center fade-up">
+      <div class="section-tag">
+        <span data-lang="pt">Planos</span>
+        <span data-lang="en">Plans</span>
+      </div>
+      <h2 class="section-title">
+        <span data-lang="pt">O preço certo<br>para <em>cada proprietário</em>.</span>
+        <span data-lang="en">The right price<br>for <em>every owner</em>.</span>
+      </h2>
+      <p class="section-sub">
+        <span data-lang="pt">14 dias grátis, sem cartão. A taxa de 1€ por hóspede é paga pelo turista.</span>
+        <span data-lang="en">14 days free, no card. The 1€ guest fee is paid by the tourist.</span>
+      </p>
+    </div>
+
+    <div class="billing-toggle-wrapper fade-up">
+      <div class="billing-toggle">
+        <button class="billing-btn active" id="bill-monthly" onclick="setBilling('monthly')">
+          <span data-lang="pt">Mensal</span>
+          <span data-lang="en">Monthly</span>
+        </button>
+        <button class="billing-btn" id="bill-yearly" onclick="setBilling('yearly')">
+          <span data-lang="pt">Anual</span>
+          <span data-lang="en">Yearly</span>
+          <span class="billing-save">−2 <span data-lang="pt">meses</span><span data-lang="en">months</span></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="plans-grid">
+      <!-- SOLO -->
+      <div class="plan-card fade-up">
+        <div class="plan-header">
+          <div class="plan-name">Solo</div>
+        </div>
+        <div class="plan-for">
+          <span data-lang="pt">1 alojamento</span>
+          <span data-lang="en">1 property</span>
+        </div>
+        <div class="plan-price">
+          <span class="currency">€</span>
+          <span class="amount" data-monthly="4,90" data-yearly="49">4,90</span>
+          <span class="period">/ <span data-lang="pt"><span class="period-label">mês</span></span><span data-lang="en"><span class="period-label">mo</span></span></span>
+        </div>
+        <div class="plan-billing-note">
+          <span class="billing-note-monthly">
+            <span data-lang="pt">Faturado mensalmente</span>
+            <span data-lang="en">Billed monthly</span>
+          </span>
+          <span class="billing-note-yearly" style="display:none">
+            <span data-lang="pt">49 € / ano · 2 meses grátis</span>
+            <span data-lang="en">€49 / year · 2 months free</span>
+          </span>
+        </div>
+        <ul class="plan-features">
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#DB4B1F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt"><strong>1 alojamento</strong></span><span data-lang="en"><strong>1 property</strong></span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#DB4B1F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">QR code e pagamento CB automático</span><span data-lang="en">QR code and automatic card payment</span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#DB4B1F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">Dashboard de pagamentos</span><span data-lang="en">Payments dashboard</span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#DB4B1F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">PDF de declaração mensal</span><span data-lang="en">Monthly declaration PDF</span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#DB4B1F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">Exportação CSV</span><span data-lang="en">CSV export</span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#DB4B1F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">Suporte por email (48h)</span><span data-lang="en">Email support (48h)</span></span></li>
+        </ul>
+        <a href="#" class="plan-cta light">
+          <span data-lang="pt">Começar grátis</span>
+          <span data-lang="en">Start free</span>
+        </a>
+      </div>
+
+      <!-- MULTI -->
+      <div class="plan-card featured fade-up">
+        <div class="plan-header">
+          <div class="plan-name">Multi</div>
+          <div class="plan-badge">
+            <span data-lang="pt">Popular</span>
+            <span data-lang="en">Popular</span>
+          </div>
+        </div>
+        <div class="plan-for">
+          <span data-lang="pt">Até 5 alojamentos</span>
+          <span data-lang="en">Up to 5 properties</span>
+        </div>
+        <div class="plan-price">
+          <span class="currency">€</span>
+          <span class="amount" data-monthly="9,90" data-yearly="99">9,90</span>
+          <span class="period">/ <span data-lang="pt"><span class="period-label">mês</span></span><span data-lang="en"><span class="period-label">mo</span></span></span>
+        </div>
+        <div class="plan-billing-note">
+          <span class="billing-note-monthly">
+            <span data-lang="pt">Faturado mensalmente</span>
+            <span data-lang="en">Billed monthly</span>
+          </span>
+          <span class="billing-note-yearly" style="display:none">
+            <span data-lang="pt">99 € / ano · 2 meses grátis</span>
+            <span data-lang="en">€99 / year · 2 months free</span>
+          </span>
+        </div>
+        <ul class="plan-features">
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#E86940" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt"><strong>Até 5 alojamentos</strong></span><span data-lang="en"><strong>Up to 5 properties</strong></span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#E86940" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">Tudo do plano Solo</span><span data-lang="en">Everything in Solo</span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#E86940" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">Dashboard consolidado multi-alojamentos</span><span data-lang="en">Consolidated multi-property dashboard</span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#E86940" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">Estatísticas avançadas (ocupação, sazonalidade)</span><span data-lang="en">Advanced stats (occupancy, seasonality)</span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#E86940" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">Lembretes automáticos (email + SMS)</span><span data-lang="en">Automatic reminders (email + SMS)</span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#E86940" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">Suporte prioritário (24h)</span><span data-lang="en">Priority support (24h)</span></span></li>
+        </ul>
+        <a href="#" class="plan-cta accent">
+          <span data-lang="pt">Começar grátis</span>
+          <span data-lang="en">Start free</span>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 10L10 2M10 2H4M10 2V8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+
+      <!-- AGÊNCIA -->
+      <div class="plan-card fade-up">
+        <div class="plan-header">
+          <div class="plan-name">
+            <span data-lang="pt">Agência</span>
+            <span data-lang="en">Agency</span>
+          </div>
+        </div>
+        <div class="plan-for">
+          <span data-lang="pt">Até 20 alojamentos</span>
+          <span data-lang="en">Up to 20 properties</span>
+        </div>
+        <div class="plan-price">
+          <span class="currency">€</span>
+          <span class="amount" data-monthly="24,90" data-yearly="249">24,90</span>
+          <span class="period">/ <span data-lang="pt"><span class="period-label">mês</span></span><span data-lang="en"><span class="period-label">mo</span></span></span>
+        </div>
+        <div class="plan-billing-note">
+          <span class="billing-note-monthly">
+            <span data-lang="pt">Faturado mensalmente</span>
+            <span data-lang="en">Billed monthly</span>
+          </span>
+          <span class="billing-note-yearly" style="display:none">
+            <span data-lang="pt">249 € / ano · 2 meses grátis</span>
+            <span data-lang="en">€249 / year · 2 months free</span>
+          </span>
+        </div>
+        <ul class="plan-features">
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#DB4B1F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt"><strong>Até 20 alojamentos</strong></span><span data-lang="en"><strong>Up to 20 properties</strong></span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#DB4B1F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">Tudo do plano Multi</span><span data-lang="en">Everything in Multi</span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#DB4B1F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">3 utilizadores · acesso por proprietário</span><span data-lang="en">3 users · per-owner access</span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#DB4B1F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">Reversão automática Stripe Connect</span><span data-lang="en">Automatic Stripe Connect payout</span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#DB4B1F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">Importação CSV em massa</span><span data-lang="en">Bulk CSV import</span></span></li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L6 10.5L11.5 4" stroke="#DB4B1F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span data-lang="pt">Logo e cores personalizadas</span><span data-lang="en">Custom logo and colors</span></span></li>
+        </ul>
+        <a href="#" class="plan-cta dark">
+          <span data-lang="pt">Começar grátis</span>
+          <span data-lang="en">Start free</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- CONCIERGERIE+ -->
+    <div class="plan-enterprise fade-up">
+      <div class="enterprise-content">
+        <div class="enterprise-tag">
+          <span data-lang="pt">Conciergerie+ · Sob medida</span>
+          <span data-lang="en">Conciergerie+ · Custom</span>
+        </div>
+        <h3 class="enterprise-title">
+          <span data-lang="pt">Para portfólios <em>maiores</em>.</span>
+          <span data-lang="en">For <em>larger</em> portfolios.</span>
+        </h3>
+        <p class="enterprise-desc">
+          <span data-lang="pt">Alojamentos e utilizadores ilimitados, marca branca completa, integração API com o seu PMS, e onboarding assistido pela nossa equipa.</span>
+          <span data-lang="en">Unlimited properties and users, full white-label, API integration with your PMS, and assisted onboarding by our team.</span>
+        </p>
+        <div class="enterprise-features">
+          <span class="enterprise-pill">
+            <span data-lang="pt">Ilimitado</span>
+            <span data-lang="en">Unlimited</span>
+          </span>
+          <span class="enterprise-pill">
+            <span data-lang="pt">Marca branca</span>
+            <span data-lang="en">White-label</span>
+          </span>
+          <span class="enterprise-pill">API · PMS</span>
+          <span class="enterprise-pill">
+            <span data-lang="pt">Account manager</span>
+            <span data-lang="en">Account manager</span>
+          </span>
+          <span class="enterprise-pill">SLA 99,9%</span>
+        </div>
+      </div>
+      <div class="enterprise-cta">
+        <div class="enterprise-price">
+          <span data-lang="pt">A partir de </span>
+          <span data-lang="en">Starting at </span>
+          <strong>79 €/<span data-lang="pt">mês</span><span data-lang="en">mo</span></strong>
+        </div>
+        <a href="mailto:hello@taxstay.pt" class="enterprise-btn">
+          <span data-lang="pt">Pedir orçamento</span>
+          <span data-lang="en">Request a quote</span>
+          <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 12L12 2M12 2H5M12 2V9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <p class="plan-note fade-up">
+      <strong>+ 1€</strong>
+      <span data-lang="pt">de taxa de serviço por hóspede — paga pelo turista, não por si.</span>
+      <span data-lang="en">service fee per guest — paid by the tourist, not by you.</span>
+    </p>
+  </div>
+</section>
+
+<!-- PROFILES -->
+<section class="section profiles-section" id="profiles">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-tag">
+        <span data-lang="pt">Para quem</span>
+        <span data-lang="en">Who it's for</span>
+      </div>
+      <h2 class="section-title">
+        <span data-lang="pt">Reconhece-se?</span>
+        <span data-lang="en">Sound familiar?</span>
+      </h2>
+    </div>
+    <div class="profiles-grid">
+      <div class="profile-card fade-up">
+        <div class="profile-header">
+          <div class="profile-avatar a1">SC</div>
+          <div class="profile-meta">
+            <div class="profile-name">Sofia C.</div>
+            <div class="profile-role">
+              <span data-lang="pt">1 apto · Lisboa</span>
+              <span data-lang="en">1 apt · Lisbon</span>
+            </div>
+          </div>
+        </div>
+        <p class="profile-quote">
+          <span data-lang="pt">"Eu moro em França. Antes, pedia aos hóspedes para me transferir a taxa. Metade esquecia. Agora é tudo automático."</span>
+          <span data-lang="en">"I live in France. Before, I asked guests to transfer the tax. Half forgot. Now everything is automatic."</span>
+        </p>
+        <span class="profile-tag">
+          <span data-lang="pt">Plano</span>
+          <span data-lang="en">Plan</span>
+          · <strong>Solo</strong>
+        </span>
+      </div>
+
+      <div class="profile-card fade-up">
+        <div class="profile-header">
+          <div class="profile-avatar a2">RM</div>
+          <div class="profile-meta">
+            <div class="profile-name">Rui M.</div>
+            <div class="profile-role">
+              <span data-lang="pt">4 alojamentos · Algarve</span>
+              <span data-lang="en">4 properties · Algarve</span>
+            </div>
+          </div>
+        </div>
+        <p class="profile-quote">
+          <span data-lang="pt">"Gerir 4 apartamentos e fazer as declarações para 3 câmaras diferentes era um pesadelo. TaxStay poupou-me horas por mês."</span>
+          <span data-lang="en">"Managing 4 apartments and filing for 3 municipalities was a nightmare. TaxStay saves me hours each month."</span>
+        </p>
+        <span class="profile-tag">
+          <span data-lang="pt">Plano</span>
+          <span data-lang="en">Plan</span>
+          · <strong>Multi</strong>
+        </span>
+      </div>
+
+      <div class="profile-card fade-up">
+        <div class="profile-header">
+          <div class="profile-avatar a3">IA</div>
+          <div class="profile-meta">
+            <div class="profile-name">Inês A.</div>
+            <div class="profile-role">
+              <span data-lang="pt">18 aptos · Porto</span>
+              <span data-lang="en">18 apts · Porto</span>
+            </div>
+          </div>
+        </div>
+        <p class="profile-quote">
+          <span data-lang="pt">"A minha agência gere 18 apartamentos para 12 proprietários. TaxStay separa a faturação e os relatórios por cliente — fundamental para nós."</span>
+          <span data-lang="en">"My agency manages 18 apartments for 12 owners. TaxStay separates billing and reports by client — essential for us."</span>
+        </p>
+        <span class="profile-tag">
+          <span data-lang="pt">Plano · </span>
+          <span data-lang="en">Plan · </span>
+          <strong><span data-lang="pt">Agência</span><span data-lang="en">Agency</span></strong>
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-aura a1"></div>
+  <div class="cta-aura a2"></div>
+  <div class="container cta-content">
+    <div class="cta-tag">
+      <span data-lang="pt">Pronto para começar?</span>
+      <span data-lang="en">Ready to start?</span>
+    </div>
+    <h2 class="cta-title">
+      <span data-lang="pt">Configure o seu primeiro<br>alojamento <em>em 2 minutos.</em></span>
+      <span data-lang="en">Set up your first<br>property <em>in 2 minutes.</em></span>
+    </h2>
+    <p class="cta-sub">
+      <span data-lang="pt">14 dias grátis. Sem cartão de crédito. Sem compromisso.</span>
+      <span data-lang="en">14 days free. No credit card. No commitment.</span>
+    </p>
+    <div class="cta-buttons">
+      <a href="#" class="btn-cta-primary">
+        <span data-lang="pt">Criar a minha conta</span>
+        <span data-lang="en">Create my account</span>
+        <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 12L12 2M12 2H5M12 2V9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a href="mailto:hello@taxstay.pt" class="btn-cta-secondary">
+        <span data-lang="pt">Falar connosco</span>
+        <span data-lang="en">Talk to us</span>
+      </a>
+    </div>
+    <div class="cta-trust">
+      <span>Stripe</span>
+      <span class="dot"></span>
+      <span>RGPD</span>
+      <span class="dot"></span>
+      <span>EU Hosted</span>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="#" class="logo">TaxStay<span class="logo-dot"></span></a>
+        <p class="footer-desc">
+          <span data-lang="pt">A solução para proprietários de alojamento local em Portugal que querem gerir a taxa turística de forma automática.</span>
+          <span data-lang="en">The solution for short-term rental owners in Portugal who want to manage tourist tax automatically.</span>
+        </p>
+        <div class="footer-domains"><span>taxstay.pt</span> · taxstay.com</div>
+      </div>
+      <div class="footer-col">
+        <h4>TaxStay</h4>
+        <a href="#how"><span data-lang="pt">Como funciona</span><span data-lang="en">How it works</span></a>
+        <a href="#pricing"><span data-lang="pt">Planos</span><span data-lang="en">Pricing</span></a>
+        <a href="#profiles"><span data-lang="pt">Para quem</span><span data-lang="en">Who it's for</span></a>
+        <a href="mailto:hello@taxstay.pt"><span data-lang="pt">Contacto</span><span data-lang="en">Contact</span></a>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <a href="#"><span data-lang="pt">Termos</span><span data-lang="en">Terms</span></a>
+        <a href="#"><span data-lang="pt">Privacidade</span><span data-lang="en">Privacy</span></a>
+        <a href="#">Cookies</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 TaxStay</span>
+      <div class="stripe-badge">
+        <span data-lang="pt">Pagamentos · Stripe</span>
+        <span data-lang="en">Payments · Stripe</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function setLang(lang) {
+    document.body.classList.toggle('en', lang === 'en');
+    document.getElementById('btn-pt').classList.toggle('active', lang === 'pt');
+    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    document.documentElement.lang = lang;
+    localStorage.setItem('taxstay-lang', lang);
+  }
+
+  const savedLang = localStorage.getItem('taxstay-lang');
+  if (savedLang === 'en') setLang('en');
+
+  function setBilling(mode) {
+    const isYearly = mode === 'yearly';
+    document.getElementById('bill-monthly').classList.toggle('active', !isYearly);
+    document.getElementById('bill-yearly').classList.toggle('active', isYearly);
+
+    // Update prices
+    document.querySelectorAll('.plan-price .amount').forEach(el => {
+      const monthly = el.getAttribute('data-monthly');
+      const yearly = el.getAttribute('data-yearly');
+      if (monthly && yearly) {
+        el.textContent = isYearly ? yearly : monthly;
+      }
+    });
+
+    // Update period labels
+    document.querySelectorAll('.period-label').forEach(el => {
+      const isPT = !document.body.classList.contains('en');
+      if (isYearly) {
+        el.textContent = isPT ? 'ano' : 'yr';
+      } else {
+        el.textContent = isPT ? 'mês' : 'mo';
+      }
+    });
+
+    // Update billing notes
+    document.querySelectorAll('.billing-note-monthly').forEach(el => {
+      el.style.display = isYearly ? 'none' : 'inline';
+    });
+    document.querySelectorAll('.billing-note-yearly').forEach(el => {
+      el.style.display = isYearly ? 'inline' : 'none';
+    });
+  }
+
+  window.addEventListener('scroll', () => {
+    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 20);
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 60);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
+
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
